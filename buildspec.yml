@@ -1,0 +1,55 @@
+version: 0.2
+
+# Reused by every service's CodeBuild project. Each CodeBuild project sets
+# these as plaintext environment variable overrides so this one file works
+# for all 5 services:
+#   SERVICE_DIR      e.g. user-service
+#   IMAGE_REPO_NAME  e.g. linkedin-user-service
+#   CONTAINER_PORT   e.g. 8081
+#   SPRING_PROFILE   dev | staging | prod  (matches the CodePipeline/EB env)
+
+env:
+  variables:
+    AWS_DEFAULT_REGION: "us-east-1"
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto17
+
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR"
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - aws ecr describe-repositories --repository-names $IMAGE_REPO_NAME --region $AWS_DEFAULT_REGION || aws ecr create-repository --repository-name $IMAGE_REPO_NAME --region $AWS_DEFAULT_REGION
+      - IMAGE_TAG=${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}
+      - IMAGE_TAG=${IMAGE_TAG:0:7}
+      - REPO_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+
+  build:
+    commands:
+      - echo "Building and testing $SERVICE_DIR"
+      - cd $SERVICE_DIR
+      - mvn -B -DskipTests=false test
+      - echo "Building Docker image $REPO_URI:$IMAGE_TAG"
+      - docker build -t $REPO_URI:$IMAGE_TAG -t $REPO_URI:latest .
+
+  post_build:
+    commands:
+      - echo "Pushing image to ECR"
+      - docker push $REPO_URI:$IMAGE_TAG
+      - docker push $REPO_URI:latest
+      - echo "Writing Dockerrun.aws.json for Elastic Beanstalk"
+      - >
+        printf '{"AWSEBDockerrunVersion":"1","Image":{"Name":"%s","Update":"true"},"Ports":[{"ContainerPort":"%s"}]}'
+        "$REPO_URI:$IMAGE_TAG" "$CONTAINER_PORT" > Dockerrun.aws.json
+      - mkdir -p .ebextensions
+      - >
+        printf 'option_settings:\n  aws:elasticbeanstalk:application:environment:\n    SPRING_PROFILES_ACTIVE: "%s"\n'
+        "$SPRING_PROFILE" > .ebextensions/01-environment.config
+
+artifacts:
+  base-directory: $SERVICE_DIR
+  files:
+    - Dockerrun.aws.json
+    - .ebextensions/**/*

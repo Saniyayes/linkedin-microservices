@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed LinkedIn System Design Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">in</div>
+                <div class="brand-text">
+                    <h2>LinkedIn Architecture</h2>
+                    <span class="badge">Distributed System</span>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="architecture">
+                    <i data-lucide="network"></i>
+                    <span>System Topology</span>
+                </button>
+                <button class="nav-item" data-tab="fanout">
+                    <i data-lucide="zap"></i>
+                    <span>Kafka Fan-Out Engine</span>
+                </button>
+                <button class="nav-item" data-tab="graph">
+                    <i data-lucide="share-2"></i>
+                    <span>Neo4j Social Graph</span>
+                </button>
+                <button class="nav-item" data-tab="benchmark">
+                    <i data-lucide="gauge"></i>
+                    <span>Redis vs SQL Benchmark</span>
+                </button>
+                <button class="nav-item" data-tab="api-tester">
+                    <i data-lucide="terminal"></i>
+                    <span>API Gateway Tester</span>
+                </button>
+            </nav>
+
+            <div class="status-panel">
+                <div class="status-title">System Status</div>
+                <div class="status-indicator online">
+                    <span class="dot"></span> API Gateway (8080)
+                </div>
+                <div class="status-indicator online">
+                    <span class="dot"></span> Kafka Event Bus (9092)
+                </div>
+                <div class="status-indicator online">
+                    <span class="dot"></span> Redis Cache (6379)
+                </div>
+                <div class="status-indicator online">
+                    <span class="dot"></span> Neo4j Graph (7687)
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <h1 id="page-title">System Topology & Microservices Architecture</h1>
+                <div class="header-actions">
+                    <span class="chip"><i data-lucide="server"></i> Spring Cloud Gateway</span>
+                    <span class="chip"><i data-lucide="cpu"></i> Event-Driven CQRS</span>
+                </div>
+            </header>
+
+            <!-- TAB 1: ARCHITECTURE TOPOLOGY -->
+            <section id="tab-architecture" class="tab-content active">
+                <div class="card card-hero">
+                    <h3>Enterprise LinkedIn Microservices Topology</h3>
+                    <p>Sub-second feed generation using Fan-Out on Write architecture, Neo4j social graph traversal, and Redis feed caching.</p>
+                </div>
+
+                <div class="arch-diagram-grid">
+                    <div class="arch-node gateway">
+                        <div class="node-icon"><i data-lucide="shield-check"></i></div>
+                        <h4>API Gateway</h4>
+                        <span class="port">Port 8080</span>
+                        <p>JWT Auth, Rate Limiting, Route Dispatching</p>
+                    </div>
+
+                    <div class="services-row">
+                        <div class="arch-node service">
+                            <div class="node-icon"><i data-lucide="user"></i></div>
+                            <h4>User Service</h4>
+                            <span class="port">Port 8081</span>
+                            <span class="tech-tag postgres">PostgreSQL</span>
+                        </div>
+                        <div class="arch-node service">
+                            <div class="node-icon"><i data-lucide="share-2"></i></div>
+                            <h4>Social Service</h4>
+                            <span class="port">Port 8082</span>
+                            <span class="tech-tag neo4j">Neo4j Graph</span>
+                        </div>
+                        <div class="arch-node service">
+                            <div class="node-icon"><i data-lucide="file-text"></i></div>
+                            <h4>Post Service</h4>
+                            <span class="port">Port 8083</span>
+                            <span class="tech-tag postgres">PostgreSQL</span>
+                        </div>
+                        <div class="arch-node service">
+                            <div class="node-icon"><i data-lucide="rss"></i></div>
+                            <h4>Feed Service</h4>
+                            <span class="port">Port 8084</span>
+                            <span class="tech-tag redis">Redis Cache</span>
+                        </div>
+                    </div>
+
+                    <div class="event-bus-banner">
+                        <div class="event-icon"><i data-lucide="radio"></i></div>
+                        <div>
+                            <h4>Apache Kafka Event Bus (Topic: <code>post-created</code>)</h4>
+                            <p>Asynchronous event propagation to Feed Service, Notification Service, and Search Service.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: KAFKA FAN-OUT ENGINE -->
+            <section id="tab-fanout" class="tab-content">
+                <div class="card">
+                    <h3>Kafka Event-Driven Fan-Out on Write Simulator</h3>
+                    <p>Demonstrates how creating a post asynchronously fans out to all follower feeds in Redis without locking the user request.</p>
+
+                    <div class="fanout-controls">
+                        <div class="form-group">
+                            <label>Author User ID</label>
+                            <input type="text" id="fanout-author" value="user_101 (Alice Chen)">
+                        </div>
+                        <div class="form-group">
+                            <label>Post Content</label>
+                            <input type="text" id="fanout-content" value="Building a Kafka & Redis Fan-Out microservice architecture! 🚀 #systemdesign">
+                        </div>
+                        <button class="btn btn-primary" id="btn-trigger-fanout">
+                            <i data-lucide="send"></i> Publish Post & Trigger Kafka Fan-Out
+                        </button>
+                    </div>
+
+                    <div class="simulation-pipeline">
+                        <div class="pipe-step" id="step-1">
+                            <div class="step-num">1</div>
+                            <div class="step-label">Post Created</div>
+                            <span class="step-detail">HTTP POST /api/posts</span>
+                        </div>
+                        <div class="pipe-line"></div>
+                        <div class="pipe-step" id="step-2">
+                            <div class="step-num">2</div>
+                            <div class="step-label">Kafka Publish</div>
+                            <span class="step-detail">topic: post-created</span>
+                        </div>
+                        <div class="pipe-line"></div>
+                        <div class="pipe-step" id="step-3">
+                            <div class="step-num">3</div>
+                            <div class="step-label">Feed Worker</div>
+                            <span class="step-detail">Fetch Followers (Neo4j)</span>
+                        </div>
+                        <div class="pipe-line"></div>
+                        <div class="pipe-step" id="step-4">
+                            <div class="step-num">4</div>
+                            <div class="step-label">Redis Fan-Out</div>
+                            <span class="step-detail">LPUSH feeds in Redis</span>
+                        </div>
+                    </div>
+
+                    <div class="live-feeds-container">
+                        <h4>Live Updated Redis Feeds (Followers)</h4>
+                        <div class="follower-feeds-grid" id="followers-feeds-list">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: NEO4J GRAPH -->
+            <section id="tab-graph" class="tab-content">
+                <div class="card">
+                    <h3>Neo4j Social Graph Relationship Visualizer</h3>
+                    <p>Demonstrates 1st-degree, 2nd-degree connections, and mutual friends query performance in Neo4j graph database.</p>
+
+                    <div class="graph-demo-actions">
+                        <button class="btn btn-secondary" id="btn-query-graph">
+                            <i data-lucide="play"></i> Execute Cypher 2nd-Degree Query
+                        </button>
+                    </div>
+
+                    <div class="code-box">
+                        <pre><code>MATCH (user:User {id: 'user_101'})-[:CONNECTED]-(mutual:User)-[:CONNECTED]-(secondDegree:User)
+WHERE NOT (user)-[:CONNECTED]-(secondDegree) AND user <> secondDegree
+RETURN secondDegree, COUNT(mutual) AS mutualCount, COLLECT(mutual.name) AS mutualFriends
+ORDER BY mutualCount DESC LIMIT 10;</code></pre>
+                    </div>
+
+                    <div class="graph-results-view">
+                        <div class="node-network">
+                            <div class="node center-node">Alice Chen (user_101)</div>
+                            <div class="connections-wrapper">
+                                <div class="degree-group">
+                                    <h5>1st Degree Connections</h5>
+                                    <div class="badge-list">
+                                        <span class="node-chip c1">Bob (user_102)</span>
+                                        <span class="node-chip c1">Carol (user_103)</span>
+                                    </div>
+                                </div>
+                                <div class="degree-group">
+                                    <h5>2nd Degree Connection Recommendations</h5>
+                                    <div class="badge-list">
+                                        <span class="node-chip c2">David (user_104) - Via Bob</span>
+                                        <span class="node-chip c2">Eve (user_105) - Via Carol</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-card">
+                            <div class="metric">
+                                <span class="metric-val">2.4 ms</span>
+                                <span class="metric-lbl">Neo4j Cypher Traversal</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-val">340 ms</span>
+                                <span class="metric-lbl">Relational SQL Recursive JOIN</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: REDIS VS SQL BENCHMARK -->
+            <section id="tab-benchmark" class="tab-content">
+                <div class="card">
+                    <h3>Redis Cache vs Relational DB Latency Benchmark</h3>
+                    <p>Comparing retrieval speed for 1,000 active follower feeds.</p>
+
+                    <div class="benchmark-comparison">
+                        <div class="bench-card redis-bench">
+                            <div class="bench-header">
+                                <h4>Redis Fan-Out Feed</h4>
+                                <span class="speed-badge fast">1.8 ms</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill redis-fill" style="width: 5%;"></div>
+                            </div>
+                            <p>Direct O(1) key lookup in Redis in-memory cache.</p>
+                            <ul>
+                                <li>No disk I/O bottleneck</li>
+                                <li>No recursive connection JOIN queries</li>
+                                <li>Pre-computed feed timeline</li>
+                            </ul>
+                        </div>
+
+                        <div class="bench-card sql-bench">
+                            <div class="bench-header">
+                                <h4>Relational SQL JOIN Query</h4>
+                                <span class="speed-badge slow">340.5 ms</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill sql-fill" style="width: 95%;"></div>
+                            </div>
+                            <p>Scans millions of posts with <code>WHERE author IN (friends)</code></p>
+                            <ul>
+                                <li>High CPU utilization</li>
+                                <li>Causes database lock contention under peak traffic</li>
+                                <li>Degrades exponentially with connection count</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: API GATEWAY TESTER -->
+            <section id="tab-api-tester" class="tab-content">
+                <div class="card">
+                    <h3>Interactive API Gateway Client</h3>
+                    <p>Test live endpoints routed through Spring Cloud API Gateway (Port 8080).</p>
+
+                    <div class="api-client">
+                        <div class="api-request-bar">
+                            <select id="api-method" class="select-method">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                            </select>
+                            <select id="api-preset" class="select-preset">
+                                <option value="/api/feed?userId=user_102">GET /api/feed (Feed Service - Redis)</option>
+                                <option value="/api/connections/second-degree/user_101">GET /api/connections/second-degree/user_101 (Neo4j Graph)</option>
+                                <option value="/api/users/user_101">GET /api/users/user_101 (User Profile)</option>
+                                <option value="/api/posts">GET /api/posts (Post Service)</option>
+                            </select>
+                            <button class="btn btn-primary" id="btn-send-request">
+                                <i data-lucide="play"></i> Send Request
+                            </button>
+                        </div>
+
+                        <div class="api-response-wrapper">
+                            <h4>Response Output</h4>
+                            <div class="response-meta">
+                                <span>Status: <strong id="res-status" class="status-200">200 OK</strong></span>
+                                <span>Time: <strong id="res-time">2.1 ms</strong></span>
+                            </div>
+                            <pre id="api-response-json"><code>{
+  "userId": "user_102",
+  "architecturePattern": "Fan-Out on Write (Kafka -> Redis Cache)",
+  "feedCount": 1,
+  "queryPerformance": {
+    "redisLatencyMs": 1.8,
+    "speedupFactor": "170x Faster"
+  }
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

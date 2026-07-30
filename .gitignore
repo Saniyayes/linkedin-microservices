@@ -1,0 +1,46 @@
+# Maven
+target/
+*.class
+
+# IntelliJ
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# NetBeans
+nbproject/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Maven Wrapper (keep these if you use Maven Wrapper)
+!.mvn/wrapper/maven-wrapper.jar
+
+# Docker
+docker-data/
+
+# Temporary files
+*.tmp
+*.swp

@@ -1,0 +1,17 @@
+logging:
+  level:
+    root: WARN
+    org.springframework.cloud.gateway: INFO
+
+management:
+  endpoint:
+    health:
+      show-details: never
+
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: ${ALLOWED_ORIGINS:https://yourdomain.com}

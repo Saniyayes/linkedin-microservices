@@ -1,0 +1,12 @@
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG
+
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
