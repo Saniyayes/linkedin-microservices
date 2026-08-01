@@ -4,8 +4,6 @@ server:
 spring:
   application:
     name: feed-service
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
   data:
     redis:
       host: ${SPRING_REDIS_HOST:localhost}

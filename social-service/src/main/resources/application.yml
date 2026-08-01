@@ -4,8 +4,6 @@ server:
 spring:
   application:
     name: social-service
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
   neo4j:
     uri: ${SPRING_NEO4J_URI:bolt://localhost:7687}
     authentication:

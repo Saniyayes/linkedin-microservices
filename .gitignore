@@ -1,46 +1,28 @@
-# Maven
+# Java / Maven
 target/
 *.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
 
-# IntelliJ
+# IDE
 .idea/
 *.iml
-
-# VS Code
 .vscode/
-
-# Eclipse
-.project
-.classpath
 .settings/
+.classpath
+.project
 
-# NetBeans
-nbproject/
-
-# Logs
-logs/
-*.log
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Environment
+# Secrets - never commit real values
 .env
-.env.*
-
-# Python
-venv/
-.venv/
-__pycache__/
-*.pyc
-
-# Maven Wrapper (keep these if you use Maven Wrapper)
-!.mvn/wrapper/maven-wrapper.jar
-
-# Docker
-docker-data/
-
-# Temporary files
-*.tmp
-*.swp
+*.pem
+*.key
+application-local.yml

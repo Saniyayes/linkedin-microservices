@@ -1,63 +1,99 @@
 package com.linkedin.user.controller;
 
+import com.linkedin.user.model.User;
+import com.linkedin.user.repository.UserRepository;
+import com.linkedin.user.security.JwtUtil;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import java.util.*;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
 
-    // Dummy user store for instant simulation & endpoint execution
-    private final Map<String, Map<String, Object>> mockUsers = new HashMap<>();
+    private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public UserController() {
-        // Seed default sample user profile
-        Map<String, Object> u1 = new HashMap<>();
-        u1.put("id", "user_101");
-        u1.put("name", "Alice Chen");
-        u1.put("title", "Senior Backend Engineer @ TechCorp");
-        u1.put("skills", List.of("Spring Boot", "Kafka", "Redis", "Distributed Systems"));
-        u1.put("company", "TechCorp");
-        u1.put("college", "Stanford University");
-        u1.put("connectionsCount", 482);
-        mockUsers.put("user_101", u1);
+    public UserController(UserRepository userRepository, JwtUtil jwtUtil) {
+        this.userRepository = userRepository;
+        this.jwtUtil = jwtUtil;
     }
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody Map<String, Object> req) {
-        String id = "user_" + (mockUsers.size() + 101);
-        req.put("id", id);
-        req.put("connectionsCount", 0);
-        mockUsers.put(id, req);
+        String email = (String) req.get("email");
+        String rawPassword = (String) req.get("password");
+        String name = (String) req.get("name");
+
+        if (email == null || rawPassword == null || name == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "name, email and password are required"));
+        }
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Email already registered"));
+        }
+
+        User user = new User();
+        user.setEmail(email);
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        user.setName(name);
+        user.setTitle((String) req.get("title"));
+        user.setCompany((String) req.get("company"));
+        user.setCollege((String) req.get("college"));
+        user = userRepository.save(user);
+
+        String token = jwtUtil.generateToken(user.getId(), user.getEmail());
         return ResponseEntity.ok(Map.of(
-            "message", "User registered successfully",
-            "userId", id,
-            "token", "eyJhbGciOiJIUzI1NiJ9.mock_jwt_token_" + id
+                "message", "User registered successfully",
+                "userId", user.getId(),
+                "token", token
         ));
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> req) {
-        String email = req.getOrDefault("email", "alice@example.com");
-        return ResponseEntity.ok(Map.of(
-            "message", "Authentication successful",
-            "token", "eyJhbGciOiJIUzI1NiJ9.mock_jwt_token_for_" + email,
-            "userId", "user_101"
-        ));
+        String email = req.get("email");
+        String rawPassword = req.get("password");
+
+        return userRepository.findByEmailIgnoreCase(email)
+                .filter(u -> rawPassword != null && passwordEncoder.matches(rawPassword, u.getPasswordHash()))
+                .map(u -> ResponseEntity.ok(Map.of(
+                        "message", "Authentication successful",
+                        "token", jwtUtil.generateToken(u.getId(), u.getEmail()),
+                        "userId", u.getId(),
+                        "name", u.getName()
+                )))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid email or password")));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserProfile(@PathVariable String id) {
-        Map<String, Object> user = mockUsers.get(id);
-        if (user == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(user);
+    public ResponseEntity<?> getUserProfile(@PathVariable Long id) {
+        return userRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateProfile(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
+        return userRepository.findById(id).map(user -> {
+            if (updates.containsKey("title")) user.setTitle((String) updates.get("title"));
+            if (updates.containsKey("company")) user.setCompany((String) updates.get("company"));
+            if (updates.containsKey("college")) user.setCollege((String) updates.get("college"));
+            if (updates.get("skills") instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<String> skills = (List<String>) updates.get("skills");
+                user.setSkills(skills);
+            }
+            return ResponseEntity.ok(userRepository.save(user));
+        }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping
     public ResponseEntity<?> getAllUsers() {
-        return ResponseEntity.ok(mockUsers.values());
+        return ResponseEntity.ok(userRepository.findAll());
     }
 }
