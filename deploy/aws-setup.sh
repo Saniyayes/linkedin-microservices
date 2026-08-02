@@ -40,7 +40,7 @@ aws rds create-db-instance \
   --master-user-password "$DB_PASSWORD" \
   --allocated-storage 20 \
   --publicly-accessible \
-  --backup-retention-period 7 \
+  --backup-retention-period 1 \
   --no-multi-az \
   --storage-type gp3 2>/dev/null || echo "RDS instance already exists, skipping"
 
@@ -80,7 +80,7 @@ for SERVICE in "${services[@]}"; do
   aws elasticbeanstalk create-environment \
     --application-name linkedin-$SERVICE \
     --environment-name linkedin-$SERVICE-prod \
-    --solution-stack-name "64bit Amazon Linux 2023 v4.3.0 running Docker" \
+    --solution-stack-name "64bit Amazon Linux 2023 v4.13.5 running Docker" \
     --option-settings \
         Namespace=aws:autoscaling:launchconfiguration,OptionName=IamInstanceProfile,Value=aws-elasticbeanstalk-ec2-role \
         Namespace=aws:elasticbeanstalk:cloudwatch:logs,OptionName=StreamLogs,Value=true \
@@ -107,7 +107,26 @@ aws elasticbeanstalk update-environment --environment-name linkedin-post-service
       Namespace=aws:elasticbeanstalk:application:environment,OptionName=SPRING_DATASOURCE_URL,Value="jdbc:postgresql://$RDS_ENDPOINT:5432/post_db" \
       Namespace=aws:elasticbeanstalk:application:environment,OptionName=SPRING_DATASOURCE_USERNAME,Value="postgres" \
       Namespace=aws:elasticbeanstalk:application:environment,OptionName=SPRING_DATASOURCE_PASSWORD,Value="$DB_PASSWORD"
+# api-gateway needs to know where every downstream service actually lives on AWS -
+# without this it falls back to docker-compose's local hostnames, which don't
+# resolve outside your local Docker network. This bit us once already; baked in
+# here so a fresh environment doesn't hit the same bug.
+echo "Waiting for all service environments before wiring gateway routes..."
+for SVC in user-service post-service social-service feed-service; do
+  aws elasticbeanstalk wait environment-updated --environment-name linkedin-$SVC-prod 2>/dev/null || sleep 60
+done
 
+USER_SERVICE_URL=$(aws elasticbeanstalk describe-environments --application-name linkedin-user-service --environment-names linkedin-user-service-prod --query "Environments[0].CNAME" --output text)
+POST_SERVICE_URL=$(aws elasticbeanstalk describe-environments --application-name linkedin-post-service --environment-names linkedin-post-service-prod --query "Environments[0].CNAME" --output text)
+SOCIAL_SERVICE_URL=$(aws elasticbeanstalk describe-environments --application-name linkedin-social-service --environment-names linkedin-social-service-prod --query "Environments[0].CNAME" --output text)
+FEED_SERVICE_URL=$(aws elasticbeanstalk describe-environments --application-name linkedin-feed-service --environment-names linkedin-feed-service-prod --query "Environments[0].CNAME" --output text)
+
+aws elasticbeanstalk update-environment --environment-name linkedin-api-gateway-prod \
+  --option-settings \
+      Namespace=aws:elasticbeanstalk:application:environment,OptionName=USER_SERVICE_URL,Value="http://$USER_SERVICE_URL" \
+      Namespace=aws:elasticbeanstalk:application:environment,OptionName=POST_SERVICE_URL,Value="http://$POST_SERVICE_URL" \
+      Namespace=aws:elasticbeanstalk:application:environment,OptionName=SOCIAL_SERVICE_URL,Value="http://$SOCIAL_SERVICE_URL" \
+      Namespace=aws:elasticbeanstalk:application:environment,OptionName=FEED_SERVICE_URL,Value="http://$FEED_SERVICE_URL"
 # ---------------------------------------------------------------------------
 # 4. Frontend hosting - AWS Amplify (git-connected, auto-builds on push)
 # ---------------------------------------------------------------------------
