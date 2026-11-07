@@ -20,17 +20,12 @@ spring:
         - id: post-service
           uri: ${POST_SERVICE_URL:http://localhost:8083}
           predicates:
-            - Path=/api/posts/**, /api/likes/**, /api/comments/**
+            - Path=/api/posts/**, /api/likes/**, /api/comments/**, /api/jobs/**
 
         - id: feed-service
           uri: ${FEED_SERVICE_URL:http://localhost:8084}
           predicates:
-            - Path=/api/feed/**
-
-        - id: chat-service
-          uri: ${CHAT_SERVICE_URL:http://localhost:8085}
-          predicates:
-            - Path=/api/chat/**, /ws/**
+            - Path=/api/feed/**, /api/chat/**, /ws/**
 
       globalcors:
         cors-configurations:

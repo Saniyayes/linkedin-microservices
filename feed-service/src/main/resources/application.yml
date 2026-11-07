@@ -4,17 +4,21 @@ server:
 spring:
   application:
     name: feed-service
-  data:
-    redis:
-      host: ${SPRING_REDIS_HOST:localhost}
-      port: 6379
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/chat_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgrespassword}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    consumer:
-      group-id: feed-service-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
+post-service:
+  url: ${POST_SERVICE_URL:http://localhost:8083}
 social-service:
   url: ${SOCIAL_SERVICE_URL:http://localhost:8082}

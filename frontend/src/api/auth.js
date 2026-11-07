@@ -1,7 +1,16 @@
 import client from './client';
 
-export const register = (payload) =>
-  client.post('/api/users/register', payload).then((res) => res.data);
+export async function login(email, password) {
+  const { data } = await client.post('/api/users/login', { email, password });
+  return data;
+}
 
-export const login = (email, password) =>
-  client.post('/api/users/login', { email, password }).then((res) => res.data);
+export async function register(userData) {
+  const { data } = await client.post('/api/users/register', userData);
+  return data;
+}
+
+export async function getMe() {
+  const { data } = await client.get('/api/users/me');
+  return data;
+}

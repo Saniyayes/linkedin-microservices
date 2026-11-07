@@ -1,14 +1,29 @@
 import axios from 'axios';
 
-// In local dev, VITE_API_BASE_URL is unset and requests go through the Vite
-// proxy (see vite.config.js). In a deployed build, this must point at the
-// real API gateway URL - set as a build-time env var in Amplify.
-const client = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '' });
+const client = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || ''
+});
 
 client.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
+
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Token expired or invalid
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default client;

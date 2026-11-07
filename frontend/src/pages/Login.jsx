@@ -1,53 +1,123 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { login } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
+import { Lock, Mail, Sparkles, ArrowRight } from 'lucide-react';
 
 export default function Login() {
-  const { login } = useAuth();
-  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const { login: authLogin } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setSubmitting(true);
     try {
-      await login(email, password);
+      const data = await login(email.trim(), password);
+      authLogin(data.token, {
+        id: data.userId,
+        name: data.name,
+        email: data.email,
+        headline: data.headline,
+        avatarUrl: data.avatarUrl
+      });
       navigate('/feed');
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid email or password.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
+  };
+
+  const handleQuickDemo = (demoEmail, demoPassword) => {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
   };
 
   return (
     <div className="auth-shell">
       <div className="auth-card card">
-        <div className="brand">
-          <div className="mark">N</div>
-          <h1 style={{ fontSize: '1.3rem' }}>Welcome back</h1>
+        <div className="auth-header">
+          <div className="auth-logo">
+            <span className="auth-logo-badge">N</span>
+            <span className="auth-logo-text">Nodework</span>
+          </div>
+          <h2>Welcome back to your network</h2>
+          <p>Stay updated on your professional world</p>
         </div>
-        {error && <div className="error-banner" style={{ marginBottom: 14 }}>{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+
+        {error && <div className="error-banner">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label>Email Address</label>
+            <div className="input-with-icon">
+              <Mail size={18} className="input-icon" />
+              <input
+                type="email"
+                required
+                placeholder="name@company.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="password">Password</label>
-            <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+
+          <div className="form-group">
+            <label>Password</label>
+            <div className="input-with-icon">
+              <Lock size={18} className="input-icon" />
+              <input
+                type="password"
+                required
+                placeholder="Enter password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
+            </div>
           </div>
-          <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%', marginTop: 4 }}>
-            {loading ? 'Signing in…' : 'Sign in'}
+
+          <button
+            type="submit"
+            className="btn btn-primary btn-block btn-lg"
+            disabled={submitting}
+          >
+            {submitting ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-        <p style={{ textAlign: 'center', marginTop: 18, fontSize: '0.88rem', color: 'var(--ink-soft)' }}>
-          New here? <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 600 }}>Create an account</Link>
-        </p>
+
+        {/* Demo Accounts Quick-Fill Box for Testing & Interview Review */}
+        <div className="demo-accounts-box">
+          <div className="demo-title">
+            <Sparkles size={14} className="text-accent" />
+            <span>One-Click Demo Accounts</span>
+          </div>
+          <div className="demo-btns-row">
+            <button
+              type="button"
+              className="btn-demo-pill"
+              onClick={() => handleQuickDemo('alice@nodework.com', 'password123')}
+            >
+              👩‍💻 Alice Chen (Architect)
+            </button>
+            <button
+              type="button"
+              className="btn-demo-pill"
+              onClick={() => handleQuickDemo('bob@nodework.com', 'password123')}
+            >
+              👨‍💻 Bob Smith (Frontend Lead)
+            </button>
+          </div>
+        </div>
+
+        <div className="auth-footer">
+          New to Nodework? <NavLink to="/register">Join now</NavLink>
+        </div>
       </div>
     </div>
   );
