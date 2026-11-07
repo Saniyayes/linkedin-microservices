@@ -33,16 +33,26 @@ services:
     plan: free
     healthCheckPath: /health
     envVars:
-      - key: PORT
-        value: 8080
       - key: USER_SERVICE_URL
-        value: http://nodework-user-service:8081
+        fromService:
+          type: web
+          name: nodework-user-service
+          envVarKey: RENDER_EXTERNAL_URL
       - key: SOCIAL_SERVICE_URL
-        value: http://nodework-social-service:8082
+        fromService:
+          type: web
+          name: nodework-social-service
+          envVarKey: RENDER_EXTERNAL_URL
       - key: POST_SERVICE_URL
-        value: http://nodework-post-service:8083
+        fromService:
+          type: web
+          name: nodework-post-service
+          envVarKey: RENDER_EXTERNAL_URL
       - key: FEED_SERVICE_URL
-        value: http://nodework-feed-service:8084
+        fromService:
+          type: web
+          name: nodework-feed-service
+          envVarKey: RENDER_EXTERNAL_URL
 
   # User Service
   - type: web
@@ -53,8 +63,6 @@ services:
     plan: free
     healthCheckPath: /health
     envVars:
-      - key: PORT
-        value: 8081
       - key: DB_HOST
         fromDatabase:
           name: nodework-postgres
@@ -85,8 +93,6 @@ services:
     plan: free
     healthCheckPath: /health
     envVars:
-      - key: PORT
-        value: 8082
       - key: DB_HOST
         fromDatabase:
           name: nodework-postgres
@@ -117,8 +123,6 @@ services:
     plan: free
     healthCheckPath: /health
     envVars:
-      - key: PORT
-        value: 8083
       - key: DB_HOST
         fromDatabase:
           name: nodework-postgres
@@ -149,8 +153,6 @@ services:
     plan: free
     healthCheckPath: /health
     envVars:
-      - key: PORT
-        value: 8084
       - key: DB_HOST
         fromDatabase:
           name: nodework-postgres
@@ -172,4 +174,7 @@ services:
           name: nodework-postgres
           property: password
       - key: SOCIAL_SERVICE_URL
-        value: http://nodework-social-service:8082
+        fromService:
+          type: web
+          name: nodework-social-service
+          envVarKey: RENDER_EXTERNAL_URL
