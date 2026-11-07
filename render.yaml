@@ -1,0 +1,175 @@
+databases:
+  - name: nodework-postgres
+    databaseName: nodework
+    user: nodework
+    plan: free
+
+services:
+  # React Frontend (Static Site - Free & Fast)
+  - type: web
+    name: nodework-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    plan: free
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: nodework-api-gateway
+          envVarKey: RENDER_EXTERNAL_URL
+
+  # API Gateway (Public Reverse Proxy & Router)
+  - type: web
+    name: nodework-api-gateway
+    runtime: docker
+    rootDir: api-gateway
+    dockerfilePath: Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: USER_SERVICE_URL
+        value: http://nodework-user-service:8081
+      - key: SOCIAL_SERVICE_URL
+        value: http://nodework-social-service:8082
+      - key: POST_SERVICE_URL
+        value: http://nodework-post-service:8083
+      - key: FEED_SERVICE_URL
+        value: http://nodework-feed-service:8084
+
+  # User Service
+  - type: web
+    name: nodework-user-service
+    runtime: docker
+    rootDir: user-service
+    dockerfilePath: Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8081
+      - key: DB_HOST
+        fromDatabase:
+          name: nodework-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: nodework-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: nodework-postgres
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: nodework-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: nodework-postgres
+          property: password
+
+  # Social Graph Service
+  - type: web
+    name: nodework-social-service
+    runtime: docker
+    rootDir: social-service
+    dockerfilePath: Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8082
+      - key: DB_HOST
+        fromDatabase:
+          name: nodework-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: nodework-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: nodework-postgres
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: nodework-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: nodework-postgres
+          property: password
+
+  # Post & Job Service
+  - type: web
+    name: nodework-post-service
+    runtime: docker
+    rootDir: post-service
+    dockerfilePath: Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8083
+      - key: DB_HOST
+        fromDatabase:
+          name: nodework-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: nodework-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: nodework-postgres
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: nodework-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: nodework-postgres
+          property: password
+
+  # Feed, Messaging & Notification Service
+  - type: web
+    name: nodework-feed-service
+    runtime: docker
+    rootDir: feed-service
+    dockerfilePath: Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8084
+      - key: DB_HOST
+        fromDatabase:
+          name: nodework-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: nodework-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: nodework-postgres
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: nodework-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: nodework-postgres
+          property: password
+      - key: SOCIAL_SERVICE_URL
+        value: http://nodework-social-service:8082

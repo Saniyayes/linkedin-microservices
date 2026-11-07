@@ -1,68 +1,92 @@
-# Nodework — LinkedIn-style Social Platform
+# Nodework — Advanced LinkedIn-Style Professional Networking Platform
 
-A microservices-based social platform: JWT authentication, a feed, profiles, and connections, built with Spring Boot and a React frontend, fronted by an API gateway.
+An enterprise-ready, microservices-based professional networking platform inspired by LinkedIn. Features comprehensive profile management, connection requests, 2nd-degree network suggestions, dynamic post feed with likes/comments/bookmarks, real-time messaging, notification center, and a full-featured job recruitment board.
 
-## Architecture
+---
 
-**Runtime services**
+## 🏛️ Microservices Architecture
 
-| Service | Port | Responsibility |
-|---|---|---|
-| `api-gateway` | 8080 | Single entry point; routes `/api/**` to the right service |
-| `user-service` | 8081 | Registration, login, JWT issuance, profile |
-| `social-service` | 8082 | Connections, followers, second-degree suggestions |
-| `post-service` | 8083 | Create/read posts |
-| `feed-service` | 8084 | Feed retrieval |
-| `frontend` | 3000 | React (Vite) SPA — login, feed, profile, connections |
+| Service | Port | Runtime | Persistence | Responsibilities |
+|---|---|---|---|---|
+| **`api-gateway`** | 8080 | Spring Cloud Gateway | — | Single public reverse proxy, CORS routing for `/api/**`, health checks |
+| **`user-service`** | 8081 | Spring Boot 3 / Java 17 | PostgreSQL (`user_db`) | JWT authentication, user registration, profile strength calculation, experience, education, certifications, user search |
+| **`social-service`**| 8082 | Spring Boot 3 / Java 17 | PostgreSQL (`social_db`) | Invitations & connection requests (send/accept/reject/withdraw/remove), follow/unfollow, 2nd-degree network discovery |
+| **`post-service`**  | 8083 | Spring Boot 3 / Java 17 | PostgreSQL (`post_db`) | Posts CRUD, image attachments, likes/unlikes, comments, bookmarking, job board (post jobs, apply, search, save) |
+| **`feed-service`**  | 8084 | Spring Boot 3 / Java 17 | PostgreSQL (`feed_db`) | Personalized feed ranking, notification center CRUD, 1-to-1 conversation & direct messaging |
+| **`frontend`**      | 3000 | React 18 + Vite | LocalStorage (JWT) | LinkedIn-style 3-column responsive UI, post composer, network manager, profile strength meter, split-view jobs, chat |
 
-**Current state, honestly:** `user-service` and `post-service` now persist to real Postgres via JPA (locally: the `docker-compose` postgres container; deployed: RDS). `social-service` and `feed-service` still hold data in-memory — connections/feed data resets on restart. That's the next real step, not yet done here.
+---
 
-## Local development
+## ✨ Implemented LinkedIn-Style Features
+
+### 1. Authentication & Profiles
+- **JWT Authentication**: Secure registration and token-based login.
+- **Profile Strength Indicator**: Dynamic percentage-based meter tracking profile completeness.
+- **Rich Experience & Education**: Add, edit, and delete positions and academic degrees.
+- **Certifications & Skills**: Showcase professional credentials and searchable expertise.
+- **Profile Hero**: Custom avatar and banner photo upload support with live editing.
+
+### 2. Professional Networking (My Network)
+- **Invitations Manager**: Send, accept, ignore, and withdraw pending connection requests.
+- **Connections List**: View established professional relationships and mutual contacts.
+- **Follow / Unfollow**: Subscribe to thought leaders and colleagues without direct connection.
+- **2nd-Degree Recommendations**: Algorithmic suggestion of connections of connections.
+
+### 3. Content Management & News Feed
+- **Rich Post Composer**: Create text posts with media/image attachments.
+- **Reactions & Engagement**: Real-time Like/Unlike counter and comment threads.
+- **Saved Posts**: Bookmark important industry posts for later reading.
+- **Personalized Ranking**: Feeds prioritized by connections, followed professionals, and recent activity.
+
+### 4. Professional Job Board
+- **Job Recruitment**: Post job openings with location, company, salary range, and type.
+- **Search & Filters**: Filter opportunities by title, company, or workplace type (Remote/Hybrid/Onsite).
+- **Easy Apply**: Submit job applications with resume links and contact details.
+- **Application Tracking**: View applied jobs and track status in real-time.
+- **Saved Jobs**: Bookmark opportunities to apply later.
+
+### 5. Direct Messaging & Notifications
+- **1-to-1 Conversations**: Real-time message exchange between connected professionals.
+- **Notification Center**: Instant badges for received invitations, post likes, comments, and messages.
+- **Mark as Read**: Filter unread alerts and clear notification queues.
+
+---
+
+## 🚀 One-Click Cloud Deployment on Render
+
+This repository includes a native **Render Blueprint (`render.yaml`)** to deploy the entire stack automatically:
+
+1. Log into your [Render Dashboard](https://dashboard.render.com).
+2. Click **New** → **Blueprint**.
+3. Connect your GitHub repository: `https://github.com/Saniyayes/linkedin-microservices`.
+4. Select the `main` branch.
+5. Render reads `render.yaml` and provisions:
+   - **`nodework-postgres`**: Managed PostgreSQL database.
+   - **`nodework-api-gateway`**: Public gateway routing traffic to microservices.
+   - **`nodework-user-service`**: User authentication and profile service.
+   - **`nodework-social-service`**: Social graph and connections service.
+   - **`nodework-post-service`**: Post, comment, like, and job service.
+   - **`nodework-feed-service`**: Feed, messaging, and notification service.
+   - **`nodework-frontend`**: Static Site hosting the React SPA.
+6. Click **Apply** to deploy the entire architecture.
+
+---
+
+## 💻 Local Development
 
 ```bash
+# Clone the repository
+git clone https://github.com/Saniyayes/linkedin-microservices.git
+cd linkedin-microservices
+
+# Start all databases and services via Docker
 docker compose up -d --build
-cd frontend && npm install && npm run dev
+
+# Run the React frontend
+cd frontend
+npm install
+npm run dev
 ```
-Frontend: `http://localhost:3000`. Gateway: `http://localhost:8080`.
-
-## API
-
-See `docs/postman_collection.json` — import into Postman/Insomnia. Covers register, login, posts, connections, health checks.
-
-## Load testing
-
-```bash
-k6 run -e BASE_URL=http://localhost:8080 load-test/loadtest.js
-```
-Ramps 0→100 virtual users through login → feed → post → profile. See `load-test/loadtest.js` for thresholds.
-
-## Deployment (AWS)
-
-One-time infra setup:
-```bash
-chmod +x deploy/aws-setup.sh
-./deploy/aws-setup.sh
-```
-Creates: ECR repo + EB application/environment per service, an RDS Postgres instance, and IAM roles. CloudWatch log streaming and enhanced health reporting are enabled on every EB environment by default — no extra setup needed for basic monitoring (EB console → your environment → **Monitoring** tab, and CloudWatch console → Log groups → `/aws/elasticbeanstalk/linkedin-*`).
-
-After that, add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` as GitHub repo secrets (Settings → Secrets and variables → Actions). Every push to `main` then runs `.github/workflows/deploy.yml`: build + test all 5 services → (on main only) build Docker images → push to ECR → deploy to Elastic Beanstalk.
-
-## Known limitations / honest next steps
-
-- **`social-service` and `feed-service` still don't persist** — data resets on restart. Same JPA pattern as `user-service`/`post-service`, just not done yet.
-- **Gateway does not enforce JWT** on downstream routes yet — `user-service` issues valid tokens, but nothing currently rejects unauthenticated requests at the gateway.
-- **No automated tests beyond `mvn verify`'s default surefire run** — the services don't currently have meaningful unit/integration test coverage; CI runs whatever exists.
-- Monitoring is CloudWatch only (logs + EB health). Prometheus/Grafana would give better cross-service dashboards and custom business metrics — worth adding once the above are in place, not before.
-- RDS security group is opened to `0.0.0.0:0` on port 5432 for a first working deployment — tighten this to just your EB instances' security group once things are confirmed working.
-
-## Repo structure
-
-```
-api-gateway/, user-service/, social-service/, post-service/, feed-service/  - Spring Boot services
-frontend/                    - React (Vite) SPA
-load-test/loadtest.js        - k6 load test
-docs/postman_collection.json - API collection
-deploy/aws-setup.sh          - one-time AWS infra provisioning
-.github/workflows/deploy.yml - CI/CD pipeline
-docker-compose.yml           - local dev stack
-```
+- Frontend: `http://localhost:3000`
+- API Gateway: `http://localhost:8080`
+- Health check: `http://localhost:8080/health`

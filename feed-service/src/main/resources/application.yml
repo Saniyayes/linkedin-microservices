@@ -1,13 +1,13 @@
 server:
-  port: 8084
+  port: ${PORT:8084}
 
 spring:
   application:
     name: feed-service
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/chat_db}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgrespassword}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:feed_db}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:postgres}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:postgrespassword}}
   jpa:
     hibernate:
       ddl-auto: update
@@ -15,10 +15,7 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-  kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
-post-service:
-  url: ${POST_SERVICE_URL:http://localhost:8083}
-social-service:
-  url: ${SOCIAL_SERVICE_URL:http://localhost:8082}
+social:
+  service:
+    url: ${SOCIAL_SERVICE_URL:http://localhost:8082}
