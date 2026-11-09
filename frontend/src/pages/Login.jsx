@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { login, googleAuth, linkedinAuth } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Mail, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, Sparkles, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -10,21 +10,50 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
 
   const { login: authLogin } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const safetyTimerRef = useRef(null);
+  const slowTimerRef = useRef(null);
 
+  // Clean up timers on unmount
   useEffect(() => {
-    // 1. Handle Google OAuth id_token in URL hash
+    return () => {
+      if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+    };
+  }, []);
+
+  // Handle OAuth callbacks from URL hash or search params
+  useEffect(() => {
+    // 1. Google OAuth id_token in URL hash
     const hash = window.location.hash;
     if (hash && hash.includes('id_token=')) {
       const hashParams = new URLSearchParams(hash.substring(1));
       const idToken = hashParams.get('id_token');
+      // Clean up hash immediately so it doesn't re-trigger or pollute URL
+      window.history.replaceState(null, '', window.location.pathname);
+
       if (idToken) {
         setSubmitting(true);
+        setStatusMessage('Verifying Google credentials with backend...');
+        
+        slowTimerRef.current = setTimeout(() => {
+          setStatusMessage('Connecting to backend services (waking up free-tier server, please wait)...');
+        }, 3000);
+
+        safetyTimerRef.current = setTimeout(() => {
+          setSubmitting(false);
+          setStatusMessage('');
+          setError('Sign in timed out waiting for server response. Please try again.');
+        }, 30000);
+
         googleAuth(idToken)
           .then(data => {
+            if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+            if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
             authLogin(data.token, {
               id: data.userId,
               name: data.name,
@@ -35,16 +64,29 @@ export default function Login() {
             navigate('/feed');
           })
           .catch(err => {
-            setError(err.response?.data?.error || 'Google sign-in failed.');
+            if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+            if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+            const msg = err.friendlyMessage
+              || err.response?.data?.error
+              || (err.response?.status === 502 ? 'Backend service is waking up. Please retry in 20 seconds.' : null)
+              || err.message
+              || 'Google sign-in failed.';
+            setError(msg);
           })
-          .finally(() => setSubmitting(false));
+          .finally(() => {
+            setSubmitting(false);
+            setStatusMessage('');
+          });
       }
     }
 
-    // 2. Handle LinkedIn OAuth code in query params
+    // 2. LinkedIn OAuth code in query params
     const code = searchParams.get('code');
     if (code) {
+      window.history.replaceState(null, '', window.location.pathname);
       setSubmitting(true);
+      setStatusMessage('Exchanging LinkedIn authorization code...');
+
       linkedinAuth(code, window.location.origin + '/login')
         .then(data => {
           authLogin(data.token, {
@@ -57,20 +99,43 @@ export default function Login() {
           navigate('/feed');
         })
         .catch(err => {
-          setError(err.response?.data?.error || 'LinkedIn sign-in failed.');
+          const msg = err.friendlyMessage || err.response?.data?.error || 'LinkedIn sign-in failed.';
+          setError(msg);
         })
-        .finally(() => setSubmitting(false));
+        .finally(() => {
+          setSubmitting(false);
+          setStatusMessage('');
+        });
     }
-  }, [searchParams]);
+  }, [searchParams, authLogin, navigate]);
 
   const isDemoEnabled = import.meta.env.VITE_DEMO_ENABLED === 'true';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!email.trim() || !password) return;
+
     setError('');
     setSubmitting(true);
+    setStatusMessage('Authenticating...');
+
+    // If server is cold on Render free tier, notify user after 3 seconds
+    slowTimerRef.current = setTimeout(() => {
+      setStatusMessage('Connecting to backend (server is spinning up, please wait a moment)...');
+    }, 3000);
+
+    // Hard safety timeout: never keep user stuck disabled longer than 30s
+    safetyTimerRef.current = setTimeout(() => {
+      setSubmitting(false);
+      setStatusMessage('');
+      setError('Connection timed out while waiting for server. Render free-tier services take ~30s to boot up. Please click Sign In again.');
+    }, 30000);
+
     try {
       const data = await login(email.trim(), password);
+      if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+
       authLogin(data.token, {
         id: data.userId,
         name: data.name,
@@ -80,10 +145,31 @@ export default function Login() {
       });
       navigate('/feed');
     } catch (err) {
-      setError(err.response?.data?.error || 'Invalid email or password.');
+      if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+      
+      const msg = err.friendlyMessage
+        || err.response?.data?.error
+        || (err.response?.status === 502 || err.response?.status === 503 
+            ? 'Backend service is starting up on Render. Please wait 20 seconds and try again.' 
+            : null)
+        || err.message
+        || 'Invalid email or password.';
+      setError(msg);
     } finally {
+      if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
       setSubmitting(false);
+      setStatusMessage('');
     }
+  };
+
+  const handleCancelSubmitting = () => {
+    if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
+    if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+    setSubmitting(false);
+    setStatusMessage('');
+    setError('Sign-in cancelled. You can retry anytime.');
   };
 
   const handleQuickDemo = (demoEmail, demoPassword) => {
@@ -103,7 +189,31 @@ export default function Login() {
           <p>Stay updated on your professional world</p>
         </div>
 
-        {error && <div className="error-banner">{error}</div>}
+        {error && (
+          <div className="error-banner" style={{ marginBottom: '16px' }}>
+            {error}
+          </div>
+        )}
+
+        {statusMessage && (
+          <div
+            style={{
+              padding: '10px 14px',
+              backgroundColor: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              color: '#1d4ed8',
+              borderRadius: '6px',
+              fontSize: '13px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <Loader2 size={16} className="animate-spin" style={{ flexShrink: 0 }} />
+            <span>{statusMessage}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
@@ -116,6 +226,7 @@ export default function Login() {
                 placeholder="name@company.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
+                disabled={submitting}
               />
             </div>
           </div>
@@ -135,6 +246,7 @@ export default function Login() {
                 placeholder="Enter password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                disabled={submitting}
               />
               <button
                 type="button"
@@ -162,9 +274,30 @@ export default function Login() {
             type="submit"
             className="btn btn-primary btn-block btn-lg"
             disabled={submitting}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
           >
+            {submitting && <Loader2 size={18} className="animate-spin" />}
             {submitting ? 'Signing in...' : 'Sign In'}
           </button>
+
+          {submitting && (
+            <div style={{ textAlign: 'center', marginTop: '10px' }}>
+              <button
+                type="button"
+                onClick={handleCancelSubmitting}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#64748b',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                Cancel / Reset
+              </button>
+            </div>
+          )}
         </form>
 
         <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0 16px', gap: '12px' }}>
@@ -177,6 +310,7 @@ export default function Login() {
           <button
             type="button"
             className="btn btn-outline btn-block"
+            disabled={submitting}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px' }}
             onClick={() => {
               const googleId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -201,6 +335,7 @@ export default function Login() {
           <button
             type="button"
             className="btn btn-outline btn-block"
+            disabled={submitting}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px' }}
             onClick={() => {
               const linkedinId = import.meta.env.VITE_LINKEDIN_CLIENT_ID;
@@ -245,8 +380,10 @@ export default function Login() {
           </div>
         )}
 
-        <div className="auth-footer">
-          New to Nodework? <NavLink to="/register">Join now</NavLink>
+        <div className="auth-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+          <div>
+            New to Nodework? <NavLink to="/register" style={{ fontWeight: 600, color: 'var(--primary, #0a66c2)' }}>Join now</NavLink>
+          </div>
         </div>
       </div>
     </div>
