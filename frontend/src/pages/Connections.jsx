@@ -103,12 +103,15 @@ export default function Connections() {
   };
 
   const handleConnect = async (targetUser) => {
+    setActionStatus(prev => ({ ...prev, [targetUser.id]: 'SENDING' }));
     try {
-      await sendConnectionRequest(user.id, targetUser.id, user.name, targetUser.name);
+      await sendConnectionRequest(user?.id, targetUser.id, user?.name || 'Member', targetUser.name || 'Member');
       setActionStatus(prev => ({ ...prev, [targetUser.id]: 'SENT' }));
       await loadData();
     } catch (err) {
-      console.error(err);
+      setActionStatus(prev => ({ ...prev, [targetUser.id]: null }));
+      const msg = err.friendlyMessage || err.response?.data?.error || (err.response?.status === 502 ? 'Connecting to social service (server is spinning up, please click Connect once more).' : 'Could not send invitation. Please try again.');
+      alert(msg);
     }
   };
 

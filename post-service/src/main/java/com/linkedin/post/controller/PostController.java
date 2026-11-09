@@ -294,7 +294,7 @@ public class PostController {
         job.setSalaryRange((String) body.getOrDefault("salaryRange", "$100k - $150k"));
         job.setDescription(description);
         job.setRequirements((String) body.getOrDefault("requirements", ""));
-        job.setPosterId((String) body.get("posterId"));
+        job.setPosterId(body.get("posterId") != null ? String.valueOf(body.get("posterId")) : "1");
         job.setPosterName((String) body.getOrDefault("posterName", "Recruiter"));
         job.setCreatedAt(System.currentTimeMillis());
 

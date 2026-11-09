@@ -354,10 +354,11 @@ export default function Profile() {
                   <button
                     type="button"
                     className="btn btn-primary btn-sm"
+                    disabled={connecting}
                     onClick={handleConnectAction}
                   >
                     <UserPlus size={16} />
-                    <span>Connect</span>
+                    <span>{connecting ? "Connecting..." : "Connect"}</span>
                   </button>
                 )}
               </div>
