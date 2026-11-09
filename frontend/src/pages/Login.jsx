@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { login } from '../api/auth';
+import { NavLink, useNavigate, useSearchParams } from 'react-router-dom';
+import { login, googleAuth, linkedinAuth } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Mail, Sparkles, Eye, EyeOff } from 'lucide-react';
 
@@ -13,6 +13,55 @@ export default function Login() {
 
   const { login: authLogin } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    // 1. Handle Google OAuth id_token in URL hash
+    const hash = window.location.hash;
+    if (hash && hash.includes('id_token=')) {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const idToken = hashParams.get('id_token');
+      if (idToken) {
+        setSubmitting(true);
+        googleAuth(idToken)
+          .then(data => {
+            authLogin(data.token, {
+              id: data.userId,
+              name: data.name,
+              email: data.email,
+              headline: data.headline,
+              avatarUrl: data.avatarUrl
+            });
+            navigate('/feed');
+          })
+          .catch(err => {
+            setError(err.response?.data?.error || 'Google sign-in failed.');
+          })
+          .finally(() => setSubmitting(false));
+      }
+    }
+
+    // 2. Handle LinkedIn OAuth code in query params
+    const code = searchParams.get('code');
+    if (code) {
+      setSubmitting(true);
+      linkedinAuth(code, window.location.origin + '/login')
+        .then(data => {
+          authLogin(data.token, {
+            id: data.userId,
+            name: data.name,
+            email: data.email,
+            headline: data.headline,
+            avatarUrl: data.avatarUrl
+          });
+          navigate('/feed');
+        })
+        .catch(err => {
+          setError(err.response?.data?.error || 'LinkedIn sign-in failed.');
+        })
+        .finally(() => setSubmitting(false));
+    }
+  }, [searchParams]);
 
   const isDemoEnabled = import.meta.env.VITE_DEMO_ENABLED === 'true';
 
@@ -135,7 +184,9 @@ export default function Login() {
                 alert('Google Sign-In is ready to activate! Please configure VITE_GOOGLE_CLIENT_ID in your environment variables.');
                 return;
               }
-              window.open(`https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleId}&response_type=token&scope=email%20profile&redirect_uri=${encodeURIComponent(window.location.origin + '/login')}`, '_self');
+              const redirectUri = window.location.origin + '/login';
+              const nonce = Math.random().toString(36).substring(2);
+              window.open(`https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleId}&response_type=id_token&scope=openid%20email%20profile&redirect_uri=${encodeURIComponent(redirectUri)}&nonce=${nonce}`, '_self');
             }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24">
