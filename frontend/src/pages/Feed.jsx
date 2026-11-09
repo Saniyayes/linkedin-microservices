@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { uploadToCloudinary, isCloudinaryConfigured } from '../utils/cloudinary';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -60,6 +61,22 @@ export default function Feed() {
   const [imageUrl, setImageUrl] = useState('');
   const [mediaType, setMediaType] = useState('TEXT');
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleFileUpload = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setUploadingImage(true);
+    try {
+      const url = await uploadToCloudinary(f);
+      setImageUrl(url);
+    } catch (err) {
+      alert(err.message || 'Image upload failed. You can also paste an image URL directly.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   // Expanded comments & loading per post
   const [expandedComments, setExpandedComments] = useState({});

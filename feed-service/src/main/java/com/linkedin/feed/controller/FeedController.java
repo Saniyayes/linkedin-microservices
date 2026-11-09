@@ -38,7 +38,7 @@ public class FeedController {
     // ─────────────────────────────────────────────────────────────────────────────
 
     @GetMapping("/api/feed")
-    public ResponseEntity<?> getFeed(@RequestParam(defaultValue = "user_102") String userId) {
+    public ResponseEntity<?> getFeed(@RequestParam(required = false, defaultValue = "") String userId) {
         long startTime = System.nanoTime();
         List<?> posts = Collections.emptyList();
         try {

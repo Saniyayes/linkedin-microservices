@@ -30,7 +30,10 @@ spring:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowedOrigins: "*"
+            allowedOriginPatterns:
+              - "http://localhost:*"
+              - "https://*.onrender.com"
+              - "${FRONTEND_URL:https://nodework-frontend.onrender.com}"
             allowedMethods:
               - GET
               - POST
@@ -38,3 +41,4 @@ spring:
               - DELETE
               - OPTIONS
             allowedHeaders: "*"
+            allowCredentials: true

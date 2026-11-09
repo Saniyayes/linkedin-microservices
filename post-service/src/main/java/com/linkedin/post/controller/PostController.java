@@ -24,6 +24,34 @@ public class PostController {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @org.springframework.beans.factory.annotation.Value("${feed-service.url:http://localhost:8084}")
+    private String feedServiceUrl;
+
+    @org.springframework.beans.factory.annotation.Value("${adzuna.app-id:}")
+    private String adzunaAppId;
+
+    @org.springframework.beans.factory.annotation.Value("${adzuna.app-key:}")
+    private String adzunaAppKey;
+
+    private final org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+
+    private void sendNotification(String recipientId, String actorId, String actorName, String actorAvatar, String type, String title, String message, String referenceId) {
+        if (recipientId == null || recipientId.equals(actorId)) return;
+        try {
+            Map<String, String> payload = Map.of(
+                "recipientId", recipientId,
+                "actorId", actorId,
+                "actorName", actorName != null ? actorName : "Member",
+                "actorAvatar", actorAvatar != null ? actorAvatar : "",
+                "type", type,
+                "title", title,
+                "message", message,
+                "referenceId", referenceId != null ? referenceId : ""
+            );
+            restTemplate.postForEntity(feedServiceUrl + "/api/feed/notifications", payload, Map.class);
+        } catch (Exception ignored) {}
+    }
+
     public PostController(PostRepository postRepository,
                           PostLikeRepository postLikeRepository,
                           PostCommentRepository postCommentRepository,
@@ -58,7 +86,11 @@ public class PostController {
         post.setAuthorHeadline((String) body.getOrDefault("authorHeadline", ""));
         post.setAuthorAvatar((String) body.getOrDefault("authorAvatar", ""));
         post.setContent((String) body.get("content"));
-        post.setImageUrl((String) body.get("imageUrl"));
+        String img = (String) body.get("imageUrl");
+        if ((img == null || img.isBlank()) && body.containsKey("mediaUrl")) {
+            img = (String) body.get("mediaUrl");
+        }
+        post.setImageUrl(img);
         post.setMediaType((String) body.getOrDefault("mediaType", "TEXT"));
         post.setCreatedAt(System.currentTimeMillis());
         post.setUpdatedAt(System.currentTimeMillis());
@@ -118,6 +150,7 @@ public class PostController {
         return postRepository.findById(id).map(post -> {
             if (body.containsKey("content")) post.setContent((String) body.get("content"));
             if (body.containsKey("imageUrl")) post.setImageUrl((String) body.get("imageUrl"));
+            else if (body.containsKey("mediaUrl")) post.setImageUrl((String) body.get("mediaUrl"));
             post.setUpdatedAt(System.currentTimeMillis());
             return ResponseEntity.ok(postRepository.save(post));
         }).orElseGet(() -> ResponseEntity.notFound().build());
@@ -264,6 +297,74 @@ public class PostController {
         job.setCreatedAt(System.currentTimeMillis());
 
         return ResponseEntity.ok(jobRepository.save(job));
+    }
+
+
+    @GetMapping("/jobs/external")
+    public ResponseEntity<?> getExternalJobs(
+            @RequestParam(required = false, defaultValue = "developer") String q,
+            @RequestParam(required = false, defaultValue = "us") String country,
+            @RequestParam(required = false, defaultValue = "1") int page) {
+
+        if (adzunaAppId == null || adzunaAppId.isBlank() || adzunaAppKey == null || adzunaAppKey.isBlank()) {
+            return ResponseEntity.ok(Map.of(
+                "configured", false,
+                "jobs", Collections.emptyList(),
+                "message", "Adzuna API credentials (ADZUNA_APP_ID, ADZUNA_APP_KEY) are not set. Configure them in the environment to enable live external job search."
+            ));
+        }
+
+        try {
+            String url = String.format(
+                "https://api.adzuna.com/v1/api/jobs/%s/search/%d?app_id=%s&app_key=%s&results_per_page=15&what=%s",
+                country, page, adzunaAppId, adzunaAppKey, java.net.URLEncoder.encode(q, java.nio.charset.StandardCharsets.UTF_8)
+            );
+            Map<?, ?> response = restTemplate.getForObject(url, Map.class);
+            List<?> results = (List<?>) response.get("results");
+
+            List<Map<String, Object>> mappedJobs = new ArrayList<>();
+            if (results != null) {
+                for (Object item : results) {
+                    if (item instanceof Map) {
+                        Map<?, ?> job = (Map<?, ?>) item;
+                        Map<String, Object> j = new HashMap<>();
+                        j.put("id", String.valueOf(job.get("id")));
+                        j.put("title", job.get("title"));
+                        j.put("description", job.get("description"));
+                        j.put("redirectUrl", job.get("redirect_url"));
+                        j.put("createdAt", job.get("created"));
+                        j.put("source", "Adzuna");
+
+                        Map<?, ?> company = (Map<?, ?>) job.get("company");
+                        j.put("company", company != null ? company.get("display_name") : "Hiring Company");
+
+                        Map<?, ?> location = (Map<?, ?>) job.get("location");
+                        j.put("location", location != null ? location.get("display_name") : "Remote / USA");
+
+                        Object sMin = job.get("salary_min");
+                        Object sMax = job.get("salary_max");
+                        if (sMin != null && sMax != null) {
+                            j.put("salary", "$" + Math.round(Double.parseDouble(String.valueOf(sMin))) + " - $" + Math.round(Double.parseDouble(String.valueOf(sMax))));
+                        } else {
+                            j.put("salary", "Competitive");
+                        }
+                        mappedJobs.add(j);
+                    }
+                }
+            }
+
+            return ResponseEntity.ok(Map.of(
+                "configured", true,
+                "count", mappedJobs.size(),
+                "jobs", mappedJobs
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of(
+                "configured", true,
+                "error", e.getMessage(),
+                "jobs", Collections.emptyList()
+            ));
+        }
     }
 
     @GetMapping("/jobs")

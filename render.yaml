@@ -112,6 +112,11 @@ services:
         fromDatabase:
           name: nodework-postgres
           property: password
+      - key: FEED_SERVICE_URL
+        fromService:
+          type: web
+          name: nodework-feed-service
+          envVarKey: RENDER_EXTERNAL_URL
 
   # Post & Job Service
   - type: web
@@ -142,6 +147,11 @@ services:
         fromDatabase:
           name: nodework-postgres
           property: password
+      - key: FEED_SERVICE_URL
+        fromService:
+          type: web
+          name: nodework-feed-service
+          envVarKey: RENDER_EXTERNAL_URL
 
   # Feed, Messaging & Notification Service
   - type: web
@@ -176,4 +186,9 @@ services:
         fromService:
           type: web
           name: nodework-social-service
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: POST_SERVICE_URL
+        fromService:
+          type: web
+          name: nodework-post-service
           envVarKey: RENDER_EXTERNAL_URL

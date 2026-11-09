@@ -33,6 +33,28 @@ export default function Jobs() {
   const [savedJobs, setSavedJobs] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [externalJobs, setExternalJobs] = useState([]);
+  const [loadingExternal, setLoadingExternal] = useState(false);
+  const [externalConfigured, setExternalConfigured] = useState(true);
+  const [externalMsg, setExternalMsg] = useState('');
+
+  const loadExternal = async () => {
+    setLoadingExternal(true);
+    try {
+      const data = await getExternalJobs(searchQuery || 'engineer');
+      if (data.configured === false) {
+        setExternalConfigured(false);
+        setExternalMsg(data.message);
+      } else {
+        setExternalConfigured(true);
+        setExternalJobs(data.jobs || []);
+      }
+    } catch (err) {
+      setExternalJobs([]);
+    } finally {
+      setLoadingExternal(false);
+    }
+  };
 
   // Modals
   const [showPostModal, setShowPostModal] = useState(false);

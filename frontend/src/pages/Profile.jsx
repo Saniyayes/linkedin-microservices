@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { uploadToCloudinary } from '../utils/cloudinary';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -22,6 +23,7 @@ import {
   Plus,
   Trash2,
   MapPin,
+  Phone,
   Building,
   GraduationCap,
   Globe,
@@ -58,6 +60,38 @@ export default function Profile() {
 
   // Form states
   const [editForm, setEditForm] = useState({});
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const avatarFileRef = useRef(null);
+  const coverFileRef = useRef(null);
+
+  const handleAvatarUpload = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setUploadingAvatar(true);
+    try {
+      const url = await uploadToCloudinary(f);
+      setEditForm(prev => ({ ...prev, avatarUrl: url }));
+    } catch (err) {
+      alert(err.message || 'Avatar upload failed');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleCoverUpload = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setUploadingCover(true);
+    try {
+      const url = await uploadToCloudinary(f);
+      setEditForm(prev => ({ ...prev, coverUrl: url }));
+    } catch (err) {
+      alert(err.message || 'Cover photo upload failed');
+    } finally {
+      setUploadingCover(false);
+    }
+  };
   const [expForm, setExpForm] = useState({ title: '', company: '', location: '', startDate: '', endDate: '', isCurrent: false, description: '' });
   const [eduForm, setEduForm] = useState({ school: '', degree: '', fieldOfStudy: '', startYear: '', endYear: '', grade: '' });
   const [certForm, setCertForm] = useState({ name: '', issuingOrganization: '', issueDate: '', credentialUrl: '' });
@@ -77,6 +111,7 @@ export default function Profile() {
         location: data.location || '',
         about: data.about || '',
         website: data.website || '',
+        phone: data.phone || '',
         avatarUrl: data.avatarUrl || '',
         coverUrl: data.coverUrl || ''
       });
@@ -350,6 +385,12 @@ export default function Profile() {
                 <span className="profile-chip">
                   <MapPin size={14} />
                   <span>{profile.location}</span>
+                </span>
+              )}
+              {profile.phone && (
+                <span className="profile-chip">
+                  <Phone size={14} />
+                  <span>{profile.phone}</span>
                 </span>
               )}
               {profile.website && (

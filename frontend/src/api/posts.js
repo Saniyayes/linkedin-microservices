@@ -8,6 +8,7 @@ export async function createPost(authorId, authorName, content, authorHeadline =
     authorAvatar,
     content,
     imageUrl,
+    mediaUrl: imageUrl,
     mediaType
   });
   return data;

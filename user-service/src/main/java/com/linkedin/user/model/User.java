@@ -31,6 +31,7 @@ public class User {
     private String about;
     
     private String website;
+    private String phone;
     private String avatarUrl;
     private String coverUrl;
 
@@ -74,6 +75,8 @@ public class User {
     public void setLocation(String location) { this.location = location; }
     public String getAbout() { return about; }
     public void setAbout(String about) { this.about = about; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
     public String getWebsite() { return website; }
     public void setWebsite(String website) { this.website = website; }
     public String getAvatarUrl() { return avatarUrl; }

@@ -17,6 +17,28 @@ public class SocialController {
     private final ConnectionRepository connectionRepository;
     private final FollowRepository followRepository;
 
+    @org.springframework.beans.factory.annotation.Value("${feed-service.url:http://localhost:8084}")
+    private String feedServiceUrl;
+
+    private final org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+
+    private void sendNotification(String recipientId, String actorId, String actorName, String actorAvatar, String type, String title, String message, String referenceId) {
+        if (recipientId == null || recipientId.equals(actorId)) return;
+        try {
+            Map<String, String> payload = Map.of(
+                "recipientId", recipientId,
+                "actorId", actorId,
+                "actorName", actorName != null ? actorName : "Member",
+                "actorAvatar", actorAvatar != null ? actorAvatar : "",
+                "type", type,
+                "title", title,
+                "message", message,
+                "referenceId", referenceId != null ? referenceId : ""
+            );
+            restTemplate.postForEntity(feedServiceUrl + "/api/feed/notifications", payload, Map.class);
+        } catch (Exception ignored) {}
+    }
+
     public SocialController(ConnectionRepository connectionRepository, FollowRepository followRepository) {
         this.connectionRepository = connectionRepository;
         this.followRepository = followRepository;
@@ -47,6 +69,7 @@ public class SocialController {
         }
 
         Connection conn = new Connection(from, to, fromName, toName, "PENDING");
+        sendNotification(to, from, fromName, "", "CONNECTION_REQUEST", "Connection Request", fromName + " wants to connect with you", from);
         return ResponseEntity.ok(Map.of(
             "status", "PENDING",
             "message", "Connection request sent successfully",

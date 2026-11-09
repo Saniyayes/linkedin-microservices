@@ -34,3 +34,8 @@ export async function getSavedJobs(userId) {
   const { data } = await client.get(`/api/posts/jobs/saved/${userId}`);
   return data;
 }
+
+export async function getExternalJobs(query = 'developer', country = 'us', page = 1) {
+  const { data } = await client.get(`/api/posts/jobs/external?q=${encodeURIComponent(query)}&country=${country}&page=${page}`);
+  return data;
+}
