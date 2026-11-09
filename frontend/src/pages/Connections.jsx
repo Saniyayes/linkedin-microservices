@@ -30,7 +30,7 @@ export default function Connections() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState('INVITES'); // INVITES, CONNECTIONS, DISCOVER
+  const [activeTab, setActiveTab] = useState('DISCOVER'); // INVITES, CONNECTIONS, DISCOVER
   const [connections, setConnections] = useState([]);
   const [pendingReceived, setPendingReceived] = useState([]);
   const [pendingSent, setPendingSent] = useState([]);
@@ -135,6 +135,31 @@ export default function Connections() {
           <div className="stat-label">Sent Requests</div>
         </div>
       </div>
+
+      {pendingReceived.length > 0 && (
+        <div
+          className="card"
+          style={{
+            padding: '12px 20px',
+            marginBottom: '16px',
+            backgroundColor: '#eff6ff',
+            border: '1px solid #bfdbfe',
+            borderRadius: '8px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer'
+          }}
+          onClick={() => setActiveTab('INVITES')}
+        >
+          <span style={{ fontSize: '14px', color: '#1e40af', fontWeight: 500 }}>
+            🔔 You have {pendingReceived.length} pending connection invitation{pendingReceived.length > 1 ? 's' : ''}!
+          </span>
+          <button type="button" className="btn btn-primary btn-sm">
+            Review Invitations
+          </button>
+        </div>
+      )}
 
       {/* Network Tabs */}
       <div className="network-tabs-row">
