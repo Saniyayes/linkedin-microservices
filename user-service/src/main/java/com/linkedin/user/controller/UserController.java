@@ -293,8 +293,26 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllUsers() {
-        return ResponseEntity.ok(userRepository.findAll());
+    public ResponseEntity<?> getAllUsers(
+            @RequestParam(required = false, defaultValue = "") String q,
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "20") int size) {
+
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(size, 1), 100));
+        Page<User> userPage;
+        if (q != null && !q.trim().isEmpty()) {
+            userPage = userRepository.searchUsersPageable(q.trim(), pageable);
+        } else {
+            userPage = userRepository.findAll(pageable);
+        }
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("users", userPage.getContent());
+        resp.put("totalElements", userPage.getTotalElements());
+        resp.put("totalPages", userPage.getTotalPages());
+        resp.put("currentPage", userPage.getNumber());
+        resp.put("pageSize", userPage.getSize());
+        return ResponseEntity.ok(resp);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

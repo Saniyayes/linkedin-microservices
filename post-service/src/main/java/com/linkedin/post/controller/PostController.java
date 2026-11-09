@@ -188,6 +188,7 @@ public class PostController {
                 postLikeRepository.save(like);
                 post.setLikesCount(post.getLikesCount() + 1);
                 liked = true;
+                sendNotification(post.getAuthorId(), userId, userName, userAvatar, "POST_LIKE", "Liked your post", userName + " liked your post", String.valueOf(post.getId()));
             }
             postRepository.save(post);
             return ResponseEntity.ok(Map.of(
@@ -224,6 +225,7 @@ public class PostController {
             comment = postCommentRepository.save(comment);
             post.setCommentsCount(post.getCommentsCount() + 1);
             postRepository.save(post);
+            sendNotification(post.getAuthorId(), authorId, authorName, authorAvatar, "POST_COMMENT", "Commented on your post", authorName + " commented on your post", String.valueOf(post.getId()));
             return ResponseEntity.ok(comment);
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }
