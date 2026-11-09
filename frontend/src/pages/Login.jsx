@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { login, googleAuth, linkedinAuth } from '../api/auth';
 import { useAuth } from '../context/AuthContext';

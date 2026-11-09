@@ -1,3 +1,4 @@
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -13,6 +14,54 @@ import Jobs from './pages/Jobs';
 import Messaging from './pages/Messaging';
 import Notifications from './pages/Notifications';
 import SearchPage from './pages/Search';
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('App ErrorBoundary caught:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '40px', maxWidth: '600px', margin: '60px auto', textAlign: 'center', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+          <h2 style={{ color: '#0a66c2', marginBottom: '16px' }}>NodeWork encountered an unexpected issue</h2>
+          <p style={{ color: '#666', marginBottom: '24px', lineHeight: 1.5 }}>
+            {this.state.error?.message || 'Something went wrong while loading this page.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+              } catch (_) {}
+              window.location.href = '/login';
+            }}
+            style={{
+              backgroundColor: '#0a66c2',
+              color: '#fff',
+              border: 'none',
+              padding: '10px 24px',
+              borderRadius: '24px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '14px'
+            }}
+          >
+            Clear Session & Return to Login
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function Layout({ children }) {
   return (
@@ -30,7 +79,8 @@ function HomeRedirect() {
 
 export default function App() {
   return (
-    <AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -120,5 +170,6 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }
