@@ -131,7 +131,7 @@ export default function Feed() {
       setShowModal(false);
       await loadFeed();
     } catch (err) {
-      alert('Failed to publish post');
+      alert(err.friendlyMessage || err.response?.data?.error || (err.response?.status === 502 ? 'Connecting to post service (server is spinning up, please retry in a moment).' : 'Failed to publish post. Please try again.'));
     } finally {
       setSubmitting(false);
     }

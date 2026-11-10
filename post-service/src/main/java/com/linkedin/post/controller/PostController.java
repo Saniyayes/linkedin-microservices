@@ -96,19 +96,22 @@ public class PostController {
         post.setUpdatedAt(System.currentTimeMillis());
         post = postRepository.save(post);
 
-        // Emit Kafka event if Kafka is available
-        try {
-            if (kafkaTemplate != null) {
-                Map<String, Object> event = new HashMap<>();
-                event.put("eventType", "POST_CREATED");
-                event.put("postId", post.getId());
-                event.put("authorId", post.getAuthorId());
-                event.put("authorName", post.getAuthorName());
-                event.put("content", post.getContent());
-                event.put("createdAt", post.getCreatedAt());
-                kafkaTemplate.send("post-created", String.valueOf(post.getId()), objectMapper.writeValueAsString(event));
-            }
-        } catch (Exception ignored) {}
+        // Emit Kafka event asynchronously so missing Kafka broker never blocks the HTTP response thread
+        final Post savedPost = post;
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                if (kafkaTemplate != null) {
+                    Map<String, Object> event = new HashMap<>();
+                    event.put("eventType", "POST_CREATED");
+                    event.put("postId", savedPost.getId());
+                    event.put("authorId", savedPost.getAuthorId());
+                    event.put("authorName", savedPost.getAuthorName());
+                    event.put("content", savedPost.getContent());
+                    event.put("createdAt", savedPost.getCreatedAt());
+                    kafkaTemplate.send("post-created", String.valueOf(savedPost.getId()), objectMapper.writeValueAsString(event));
+                }
+            } catch (Exception ignored) {}
+        });
 
         return ResponseEntity.ok(Map.of(
                 "status", "success",
